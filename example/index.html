@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Edilink demo</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta charset="UTF-8">
+        <style>
+            body {
+                margin: 30px;
+                font-family: sans-serif;
+                display: grid;
+                grid-template-columns: 3fr 2fr;
+                grid-template-rows: min-content auto;
+                gap: 15px;
+            }
+
+            #controls {
+                grid-column: 1 / 3;
+                display: flex;
+                gap: 10px;
+            }
+
+            #editor > div {
+                display: flex;
+                flex-direction: column;
+            }
+
+            #editor p {
+                margin-bottom: 10px;
+            }
+
+            #log {
+                display: block;
+                max-height: 80vh;
+                overflow-y: scroll;
+                word-wrap: anywhere;
+                white-space: pre-line;
+            }
+
+            hr {
+                border: none;
+                margin-top: 30px;
+            }
+        </style>
+        <script type="module">
+            import { html, render, Component } from "https://unpkg.com/htm/preact/index.mjs?module"
+
+            let formatMessage = m => {
+                let fields = Object.entries(m.fields).map(([k,v]) => `${k}: ${v}`).join(", ")
+                let tags = "(no tags)"
+                let meta = `(editor ${m.eid}, note ${String(m.id)} ${m.guid}, type ${m.noteTypeId})`
+                if (m.tags !== "") tags = `(tags: ${m.tags})`
+                return `${fields}\n${tags}\n${meta}`;
+            }
+
+            class App extends Component {
+                port = 32343
+
+                constructor() {
+                    super()
+                    this.state = {
+                        log: [],
+                        connected: false,
+                        eid: "",
+                        id: "",
+                        guid: "",
+                        noteTypeId: "",
+                        fields: {},
+                        tags: "",
+                    }
+                }
+
+                connect = () => {
+                    this.socket?.close?.()
+                    this.socket = new WebSocket("ws://localhost:" + this.port, "edilink")
+                    this.socket.onopen = () => this.setState({connected: true})
+                    this.socket.onclose = () => this.setState({connected: false})
+                    this.socket.onmessage = m => this.msg(JSON.parse(m.data))
+                }
+
+                componentDidMount = () => {
+                    this.connect()
+                }
+
+                msg = (data) => {
+                    this.setState(s => {
+                        s.log.push("↓ " + formatMessage(data))
+                        s.eid = data.eid
+                        s.id = data.id
+                        s.guid = data.guid
+                        s.noteTypeId = data.noteTypeId
+                        s.fields = data.fields
+                        s.tags = data.tags
+                        return s
+                    })
+                }
+
+                modifyField = (name, value) => {
+                    this.setState(s => {
+                        if (name === "_tags") {
+                            s.tags = value
+                        } else {
+                            s.fields[name] = value
+                        }
+                        let d = JSON.stringify({
+                            eid: s.eid,
+                            id: s.id,
+                            guid: s.guid,
+                            noteTypeId: s.noteTypeId,
+                            fields: s.fields,
+                            tags: s.tags,
+                        })
+                        s.log.push("↑ " + formatMessage(s))
+                        this.socket?.send?.(d)
+                        return s
+                    })
+                }
+
+                render = () => {
+                    return html`
+                        <div id="controls">
+                            <span>${this.state.connected ? "Connected" : "Disconnected"}</span>
+                            <button onclick=${this.connect}>Reconnect</button>
+                        </div>
+
+                        <div id="editor">
+                            ${Object.entries(this.state.fields).map(([name, content], k) => html`
+                                <div key=${k}>
+                                    <p>${name}</p>
+                                    <input type="text" value=${content} oninput=${e => this.modifyField(name, e.target.value)} />
+                                </div>
+                            `)}
+                            <hr />
+                            <div>
+                                <p>Tags</p>
+                                <input type="text" value=${this.state.tags} oninput=${e => this.modifyField("_tags", e.target.value)} />
+                            </div>
+                        </div>
+
+                        <ul id="log">
+                            ${this.state.log.map((v, i) => html`<li key=${i}>${v}</li>`).reverse()}
+                        </ul>
+                    `
+                }
+            }
+
+            render(html`<${App} />`, document.body)
+        </script>
+    </head>
+    <body></body>
+</html>

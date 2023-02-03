@@ -35,11 +35,10 @@ s.send(JSON.stringify(data))
 To clarify, the read-only fields have to be included in the write requests (because they might be required to identify
 the relevant editor and note) but changing their value doesn't edit the note.
 
-<!-- TODO
 ## Example app
-The [example/](example/) directory contains a simple web app which essentially duplicates the functionality of the editor and displays a log of exchanged messages. If you want to try it out, install the add-on, open Anki and an editor, and open the website in your browser. Everything should connect automatically.
-![This is an image](example/screenshot.png)
--->
+The [example/](example/) directory contains a simple web app which essentially duplicates the functionality of the editor and also displays a log of exchanged messages. If you want to try it out, install the add-on, open Anki and an editor, and open the website in your browser. Everything should connect automatically.
+
+![A recording of the example app](example/edilink-demo.gif)
 
 <hr>
 

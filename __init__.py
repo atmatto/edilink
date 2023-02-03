@@ -27,6 +27,7 @@ def broadcast(text: str):
 def init_ws() -> bool:
     global ws_server
     ws_server = QtWebSockets.QWebSocketServer("stol remote", QtWebSockets.QWebSocketServer.SslMode.NonSecureMode, mw.window())
+    ws_server.setSupportedSubprotocols(["edilink"])
     qt.qconnect(ws_server.newConnection, new_connection)
     return ws_server.listen(QtNetwork.QHostAddress("localhost"), 32343)
 
